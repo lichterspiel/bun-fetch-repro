@@ -1,7 +1,9 @@
-// Server Component that fetches during RSC render — like the real app does
+// Test: RSC fetch inside Suspense boundaries with cacheComponents enabled
 // Usage: /?url=https://api.intellegam.com/customer/project/app/chat/config
 
-async function fetchConfig(url: string) {
+import { Suspense } from "react";
+
+async function fetchConfig(url: string, label: string) {
   const start = performance.now();
   try {
     const response = await fetch(url, {
@@ -20,6 +22,7 @@ async function fetchConfig(url: string) {
     }
 
     return {
+      label,
       status: response.status,
       bodyLength: body.length,
       ok: body.length > 0,
@@ -33,6 +36,7 @@ async function fetchConfig(url: string) {
     };
   } catch (error) {
     return {
+      label,
       status: 0,
       bodyLength: 0,
       ok: false,
@@ -42,6 +46,46 @@ async function fetchConfig(url: string) {
       error: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+// Async server component rendered inside Suspense — like ChatConfig loading
+async function ConfigBlock({ url, label }: { url: string; label: string }) {
+  const result = await fetchConfig(url, label);
+
+  return (
+    <div
+      style={{
+        border: "1px solid #ccc",
+        padding: "1rem",
+        marginBottom: "1rem",
+      }}
+    >
+      <h3>
+        {label}: {result.ok ? "OK" : "FAILED"}
+      </h3>
+      <p>
+        Status: {result.status} | Body: {result.bodyLength} bytes | {result.ms}
+        ms
+      </p>
+      {result.error && (
+        <p style={{ color: "red", fontWeight: "bold" }}>{result.error}</p>
+      )}
+      {result.parseError && (
+        <p style={{ color: "red" }}>Parse error: {result.parseError}</p>
+      )}
+      <pre
+        style={{
+          background: "#f0f0f0",
+          padding: "0.5rem",
+          overflow: "auto",
+          maxHeight: "200px",
+          fontSize: "12px",
+        }}
+      >
+        {JSON.stringify(result.parsed, null, 2) ?? "(empty)"}
+      </pre>
+    </div>
+  );
 }
 
 export default async function Page({
@@ -59,53 +103,55 @@ export default async function Page({
       <div style={{ fontFamily: "monospace", padding: "2rem" }}>
         <h1>Bun fetch() Repro</h1>
         <p>Runtime: {runtime}</p>
+        <p>cacheComponents: true</p>
         <h2>Tests</h2>
         <ul>
           <li>
-            <a href="/api/test-fetch">/api/test-fetch</a> — hardcoded public
-            endpoints (API route)
+            <a href="/api/test-fetch">/api/test-fetch</a> — hardcoded endpoints
+            (API route)
           </li>
           <li>
             <a href="/api/test-fetch?url=https://jsonplaceholder.typicode.com/todos/1">
               /api/test-fetch?url=...
             </a>{" "}
-            — dynamic URL test (API route)
+            — dynamic URL (API route)
           </li>
           <li>
             <a href="/?url=https://jsonplaceholder.typicode.com/todos/1">
               /?url=...
             </a>{" "}
-            — fetch during RSC render (this page)
+            — Suspense + cacheComponents (RSC)
           </li>
         </ul>
       </div>
     );
   }
 
-  // Fetch during RSC render — this is the cold start context
-  const result = await fetchConfig(url);
-
+  // Multiple Suspense boundaries fetching the same URL — mimics real app pattern
+  // where page.tsx and multiple components each fetch configs
   return (
     <div style={{ fontFamily: "monospace", padding: "2rem" }}>
-      <h1>RSC Fetch Test</h1>
+      <h1>Suspense + cacheComponents Test</h1>
       <p>Runtime: {runtime}</p>
       <p>URL: {url}</p>
-      <p>
-        Status: {result.status} | Body: {result.bodyLength} bytes |{" "}
-        {result.ms}ms
-      </p>
-      {result.error && (
-        <p style={{ color: "red", fontWeight: "bold" }}>
-          ERROR: {result.error}
-        </p>
-      )}
-      {result.parseError && (
-        <p style={{ color: "red" }}>Parse error: {result.parseError}</p>
-      )}
-      <h2>Response</h2>
-      <pre style={{ background: "#f0f0f0", padding: "1rem", overflow: "auto" }}>
-        {JSON.stringify(result.parsed, null, 2) ?? "(empty)"}
-      </pre>
+      <p>cacheComponents: true</p>
+      <hr />
+
+      <Suspense fallback={<p>Loading config 1...</p>}>
+        <ConfigBlock url={url} label="Suspense 1" />
+      </Suspense>
+
+      <Suspense fallback={<p>Loading config 2...</p>}>
+        <ConfigBlock url={url} label="Suspense 2" />
+      </Suspense>
+
+      <Suspense fallback={<p>Loading config 3...</p>}>
+        <ConfigBlock url={url} label="Suspense 3" />
+      </Suspense>
+
+      <Suspense fallback={<p>Loading config 4...</p>}>
+        <ConfigBlock url={url} label="Suspense 4" />
+      </Suspense>
     </div>
   );
 }
