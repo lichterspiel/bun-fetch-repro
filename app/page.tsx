@@ -2,8 +2,7 @@
 // Usage: /?url=https://api.intellegam.com/customer/project/app/chat/config
 
 import { Suspense } from "react";
-
-export const dynamic = "force-dynamic";
+import { connection } from "next/server";
 
 async function fetchConfig(url: string, label: string) {
   const start = performance.now();
@@ -90,11 +89,12 @@ async function ConfigBlock({ url, label }: { url: string; label: string }) {
   );
 }
 
-export default async function Page({
+async function PageContent({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await connection();
   const params = await searchParams;
   const url = typeof params.url === "string" ? params.url : null;
   const runtime =
@@ -129,8 +129,6 @@ export default async function Page({
     );
   }
 
-  // Multiple Suspense boundaries fetching the same URL — mimics real app pattern
-  // where page.tsx and multiple components each fetch configs
   return (
     <div style={{ fontFamily: "monospace", padding: "2rem" }}>
       <h1>Suspense + cacheComponents Test</h1>
@@ -155,5 +153,17 @@ export default async function Page({
         <ConfigBlock url={url} label="Suspense 4" />
       </Suspense>
     </div>
+  );
+}
+
+export default function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <PageContent searchParams={searchParams} />
+    </Suspense>
   );
 }
