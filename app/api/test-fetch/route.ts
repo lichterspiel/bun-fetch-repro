@@ -62,40 +62,49 @@ export async function GET() {
     results.push(result);
   }
 
-  // Run the same endpoint 10 times to show intermittent behavior
-  const multiRunResults = [];
-  const targetUrl = "https://jsonplaceholder.typicode.com/todos/1";
-  for (let i = 0; i < 10; i++) {
-    try {
-      const response = await fetch(targetUrl, {
-        headers: { Accept: "application/json" },
-      });
-      const body = await response.text();
-      multiRunResults.push({
-        run: i + 1,
-        status: response.status,
-        bodyLength: body.length,
-        ok: body.length > 0,
-      });
-    } catch (error) {
-      multiRunResults.push({
-        run: i + 1,
-        status: 0,
-        bodyLength: 0,
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+  // Run each target endpoint 10 times to show intermittent behavior
+  async function repeatedFetch(url: string, runs: number) {
+    const multiRunResults = [];
+    for (let i = 0; i < runs; i++) {
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+        const body = await response.text();
+        multiRunResults.push({
+          run: i + 1,
+          status: response.status,
+          bodyLength: body.length,
+          ok: body.length > 0,
+        });
+      } catch (error) {
+        multiRunResults.push({
+          run: i + 1,
+          status: 0,
+          bodyLength: 0,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
+    return {
+      url,
+      runs: multiRunResults,
+      successRate: `${multiRunResults.filter((r) => r.ok).length}/${runs}`,
+    };
   }
+
+  const jsonPlaceholderRepeated = await repeatedFetch(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    10
+  );
 
   return Response.json({
     runtime: typeof Bun !== "undefined" ? `Bun ${Bun.version}` : "Node.js",
     timestamp: new Date().toISOString(),
     singleFetch: results,
     repeatedFetch: {
-      url: targetUrl,
-      runs: multiRunResults,
-      successRate: `${multiRunResults.filter((r) => r.ok).length}/10`,
+      jsonPlaceholder: jsonPlaceholderRepeated,
     },
   });
 }
