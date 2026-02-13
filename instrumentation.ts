@@ -1,8 +1,9 @@
-// DISABLED for testing — only OTel, no Sentry
-import { registerOTel } from "@vercel/otel";
-
+// TESTING: Only Sentry, no OTel
 export async function register() {
-  registerOTel({ serviceName: "bun-fetch-repro" });
-  // Sentry disabled for this test
-  // await import("./sentry.server.config");
+  // OTel disabled for this test
+  // registerOTel({ serviceName: "bun-fetch-repro" });
+
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
 }
