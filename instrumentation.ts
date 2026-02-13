@@ -1,9 +1,6 @@
-// TESTING: Only Sentry, no OTel
-export async function register() {
-  // OTel disabled for this test
-  // registerOTel({ serviceName: "bun-fetch-repro" });
+// MINIMAL REPRO: Only @vercel/otel causes Bun fetch() to return empty bodies
+import { registerOTel } from "@vercel/otel";
 
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("./sentry.server.config");
-  }
+export async function register() {
+  registerOTel({ serviceName: "bun-fetch-repro" });
 }
