@@ -1,13 +1,8 @@
-// Matches real app: Sentry + OpenTelemetry instrumentation
-import { captureRequestError } from "@sentry/nextjs";
+// DISABLED for testing — only OTel, no Sentry
 import { registerOTel } from "@vercel/otel";
 
 export async function register() {
   registerOTel({ serviceName: "bun-fetch-repro" });
-
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("./sentry.server.config");
-  }
+  // Sentry disabled for this test
+  // await import("./sentry.server.config");
 }
-
-export const onRequestError = captureRequestError;

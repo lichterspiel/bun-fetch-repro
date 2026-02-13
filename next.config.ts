@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(nextConfig, {
   org: "test",
   project: "bun-fetch-repro",
+  // No auth token needed — source map upload will silently fail, but
+  // Sentry's fetch patching still runs at runtime which is what we're testing
+  authToken: undefined,
   silent: true,
   widenClientFileUpload: false,
   tunnelRoute: "/monitoring",
