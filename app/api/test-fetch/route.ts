@@ -20,7 +20,53 @@ const TEST_ENDPOINTS = [
   },
 ];
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Dynamic mode: /api/test-fetch?url=https://example.com/path
+  const { searchParams } = new URL(request.url);
+  const customUrl = searchParams.get("url");
+
+  if (customUrl) {
+    const runs = [];
+    for (let i = 0; i < 10; i++) {
+      const start = performance.now();
+      try {
+        const response = await fetch(customUrl, {
+          headers: { Accept: "application/json" },
+        });
+        const body = await response.text();
+        const ms = Math.round(performance.now() - start);
+        runs.push({
+          run: i + 1,
+          status: response.status,
+          bodyLength: body.length,
+          ok: body.length > 0,
+          ms,
+          ...(body.length === 0 && response.ok
+            ? { error: "EMPTY_BODY: status 200 but body is empty" }
+            : {}),
+          ...(i === 0 ? { bodyPreview: body.slice(0, 200) } : {}),
+        });
+      } catch (error) {
+        runs.push({
+          run: i + 1,
+          status: 0,
+          bodyLength: 0,
+          ok: false,
+          ms: Math.round(performance.now() - start),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return Response.json({
+      runtime: typeof Bun !== "undefined" ? `Bun ${Bun.version}` : "Node.js",
+      timestamp: new Date().toISOString(),
+      url: customUrl,
+      successRate: `${runs.filter((r) => r.ok).length}/10`,
+      runs,
+    });
+  }
+
+  // Default mode: test hardcoded public endpoints
   const results = [];
 
   for (const endpoint of TEST_ENDPOINTS) {
