@@ -3,6 +3,8 @@
 
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+
 async function fetchConfig(url: string, label: string) {
   const start = performance.now();
   try {
